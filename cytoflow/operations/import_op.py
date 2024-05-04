@@ -50,7 +50,7 @@ import cytoflow.utility as util
 
 from ..experiment import Experiment
 from .i_operation import IOperation
-
+from tqdm import tqdm
 
 class Tube(HasTraits):
     """
@@ -339,29 +339,16 @@ class ImportOp(HasStrictTraits):
                 
                                 
         experiment.metadata['fcs_metadata'] = {}
-        for tube in self.tubes:
+        for tube in tqdm(self.tubes): # TQDM for progress bars during import
             if metadata_only:
-                try:
-                    tube_meta, tube_data = parse_tube(tube.file,
-                                                      experiment,
-                                                      data_set = self.data_set,
-                                                      metadata_only = True)
-                except Exception as e:
-                    raise util.CytoflowOpError('tubes',
-                                               "FCS reader threw an error reading metadata "
-                                               "for tube {}: {}"
-                                               .format(self.tubes[0].file, str(e))) from e
+                tube_meta, tube_data = parse_tube(tube.file,
+                                                  experiment,
+                                                  data_set = self.data_set,
+                                                  metadata_only = True)
             else:
-                try:
-                    tube_meta, tube_data = parse_tube(tube.file, 
-                                                      experiment, 
-                                                      data_set = self.data_set)
-                except Exception as e:
-                    raise util.CytoflowOpError('tubes',
-                                               "FCS reader threw an error reading data "
-                                               "for tube {}: {}"
-                                               .format(self.tubes[0].file, str(e))) from e
-                
+                tube_meta, tube_data = parse_tube(tube.file, 
+                                                  experiment, 
+                                                  data_set = self.data_set)
     
                 if self.events is not None:
                     if self.events <= len(tube_data):
@@ -647,5 +634,3 @@ def parse_tube(filename, experiment = None, data_set = 0, metadata_only = False)
     del tube_meta['__header__']
             
     return tube_meta, tube_data
-
-
