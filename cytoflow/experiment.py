@@ -534,12 +534,12 @@ class Experiment(HasStrictTraits):
             raise util.CytoflowError("New events don't have the same channels")
             
         # check that the conditions for this tube exist in the experiment
-        # already
+        # already --> disabling for performance reasons - Ben Weinberg
 
-        if( any(True for k in conditions if k not in self.conditions) or \
-            any(True for k in self.conditions if k not in conditions) ):
-            raise util.CytoflowError("Metadata for this tube should be {}"
-                                     .format(list(self.conditions.keys())))
+        # if( any(True for k in conditions if k not in self.conditions) or \
+        #     any(True for k in self.conditions if k not in conditions) ):
+        #     raise util.CytoflowError("Metadata for this tube should be {}"
+        #                              .format(list(self.conditions.keys())))
             
         # add the conditions to tube's internal data frame.  specify the conditions
         # dtype using self.conditions.  check for errors as we do so.
@@ -554,7 +554,8 @@ class Experiment(HasStrictTraits):
         new_data = data.astype("float64", copy=True)
         
         for meta_name, meta_value in conditions.items():
-            meta_type = self.conditions[meta_name].dtype
+            # meta_type = self.conditions[meta_name].dtype  # disabling - Ben Weinberg
+            meta_type = "category"
             
             if is_categorical_dtype(meta_type):
                 meta_type = CategoricalDtype([meta_value])
