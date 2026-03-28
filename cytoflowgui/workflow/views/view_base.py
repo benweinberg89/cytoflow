@@ -64,6 +64,22 @@ COLORMAPS = {'deep' : "a:deep (Qual)",
              'Reds' : "v:Reds (Cont)"
              }
 
+LEGEND_LOCATIONS = ["upper right",
+                    "upper left",
+                    "lower left",
+                    "lower right",
+                    "center left",
+                    "center right",
+                    "lower center",
+                    "upper center",
+                    "center",
+                    "outside right upper",
+                    "outside center right",
+                    "outside right lower",
+                    "outside left upper",
+                    "outside center left",
+                    "outside left lower"]
+
 class IWorkflowView(IView):
     """
     An interface that extends a `cytoflow` view with functions 
@@ -286,6 +302,7 @@ class BasePlotParams(HasStrictTraits):
     sns_context = Enum(['notebook', 'paper', 'poster', 'talk'])
     palette = Enum([''] + list(COLORMAPS.keys()))
     legend = Bool(True)
+    legend_loc = Str("upper right")
     sharex = Bool(True)
     sharey = Bool(True)
     despine = Bool(True)

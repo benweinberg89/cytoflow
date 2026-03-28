@@ -35,8 +35,84 @@ import seaborn as sns
 sns.set(context = "paper", style = "whitegrid", 
         rc = {"xtick.bottom": True, "ytick.left": True})
 
-# make sure that non-seaborn plots use tight layout
-plt.rcParams['figure.autolayout'] = True
+# make sure that non-seaborn plots use constrained layout
+plt.rcParams['figure.constrained_layout.use'] = True
+
+# monkey-patch seaborn
+def add_legend(self, legend_data=None, title=None, label_order=None,
+                   adjust_subtitles=False, **kwargs):
+        """Draw a legend, maybe placing it outside axes and resizing the figure.
+
+        Parameters
+        ----------
+        legend_data : dict
+            Dictionary mapping label names (or two-element tuples where the
+            second element is a label name) to matplotlib artist handles. The
+            default reads from ``self._legend_data``.
+        title : string
+            Title for the legend. The default reads from ``self._hue_var``.
+        label_order : list of labels
+            The order that the legend entries should appear in. The default
+            reads from ``self.hue_names``.
+        adjust_subtitles : bool
+            If True, modify entries with invisible artists to left-align
+            the labels and set the font size to that of a title.
+        kwargs : key, value pairings
+            Other keyword arguments are passed to the underlying legend methods
+            on the Figure or Axes object.
+
+        Returns
+        -------
+        self : Grid instance
+            Returns self for easy chaining.
+
+        """
+        # Find the data for the legend
+        if legend_data is None:
+            legend_data = self._legend_data
+        if label_order is None:
+            if self.hue_names is None:
+                label_order = list(legend_data.keys())
+            else:
+                label_order = list(map(sns.utils.to_utf8, self.hue_names))
+
+        blank_handle = mpl.patches.Patch(alpha=0, linewidth=0)
+        handles = [legend_data.get(lab, blank_handle) for lab in label_order]
+        title = self._hue_var if title is None else title
+        title_size = mpl.rcParams["legend.title_fontsize"]
+
+        # Unpack nested labels from a hierarchical legend
+        labels = []
+        for entry in label_order:
+            if isinstance(entry, tuple):
+                _, label = entry
+            else:
+                label = entry
+            labels.append(label)
+
+        # Set default legend kwargs
+        kwargs.setdefault("scatterpoints", 1)
+
+        kwargs.setdefault("frameon", False)
+        kwargs.setdefault("loc", "outside center right")
+
+        # Draw a full-figure legend outside the grid
+        figlegend = self._figure.legend(handles, labels, **kwargs)
+
+        self._legend = figlegend
+        figlegend.set_title(title, prop={"size": title_size})
+
+        if adjust_subtitles:
+            sns.utils.adjust_legend_subtitles(figlegend)
+
+        return self
+
+def tight_layout(self, *args, **kwargs):
+    pass
+
+from seaborn.axisgrid import Grid
+Grid.tight_layout = tight_layout
+Grid.add_legend = add_legend
 
 from .i_view import IView
 from .i_selectionview import ISelectionView

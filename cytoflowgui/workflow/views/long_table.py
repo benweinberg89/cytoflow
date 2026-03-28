@@ -47,9 +47,14 @@ class LongTableWorkflowView(WorkflowByView, LongTableView):
     def plot(self, experiment, **kwargs):
         if experiment is None:
             raise util.CytoflowViewError("No experiment specified")
+    
+        if self.statistic not in experiment.statistics:
+            raise util.CytoflowViewError('statistic', 
+                                         "Can't find the statistic {} in the experiment"
+                                         .format(self.statistic))
         
-        super().plot(experiment)
         self.result = experiment.statistics[self.statistic]
+        super().plot(experiment)
         
     def get_notebook_code(self, idx):
         view = LongTableView()

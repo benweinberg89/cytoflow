@@ -24,7 +24,6 @@ cytoflowgui.workflow.views.matrix
 """
 
 from textwrap import dedent
-import matplotlib.pyplot as plt
 
 from traits.api import provides, Instance, HasStrictTraits, Str, Bool, Enum, Callable
 
@@ -105,6 +104,7 @@ def _dump_params(params):
                 sns_style = params.sns_style,
                 sns_context = params.sns_context,
                 legend = params.legend,
+                legend_loc = params.legend_loc,
                 palette = params.palette,
                 )
 

@@ -125,8 +125,10 @@ class BaseView(HasStrictTraits):
         legend : bool
             Plot a legend for the color or hue facet?  Defaults to `True`.
             
-        legend_out : bool
-            Plot the legend outside of the plot or grid? Defaults to `True`.
+        legend_loc : str
+            If we plot a legend, where should it go? This is a ``matplotlib``
+            legend location string, like 'lower right' or 'outside center right'.
+            Default is 'upper right'.
             
         sharex : bool
             If there are multiple subplots, should they share X axes?  Defaults
@@ -212,7 +214,7 @@ class BaseView(HasStrictTraits):
         aspect = kwargs.pop("aspect", 1.5)
         
         legend = kwargs.pop('legend', True)
-        legend_out = kwargs.pop('legend_out', True)
+        legend_loc = kwargs.pop('legend_loc', 'upper right')
 
         despine = kwargs.pop('despine', False)
         margin_titles = kwargs.pop('margin_titles', False)
@@ -268,7 +270,6 @@ class BaseView(HasStrictTraits):
                               row_order = row_order,
                               hue_order = hue_order,
                               col_wrap = col_wrap,
-                              legend_out = legend_out,
                               sharex = sharex,
                               sharey = sharey,
                               despine = despine,
@@ -366,7 +367,8 @@ class BaseView(HasStrictTraits):
                     g.add_legend(title = huelabel, 
                                  legend_data = legend_data,
                                  frameon = True,
-                                 fancybox = True)
+                                 fancybox = True,
+                                 loc = legend_loc)
                     self._update_legend(g._legend)
                         
         if title:

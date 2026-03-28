@@ -152,6 +152,7 @@ def _dump_params_v2(params):
                 sns_style = params.sns_style,
                 sns_context = params.sns_context,
                 legend = params.legend,
+                legend_loc = params.legend_loc,
                 sharex = params.sharex,
                 sharey = params.sharey,
                 despine = params.despine,

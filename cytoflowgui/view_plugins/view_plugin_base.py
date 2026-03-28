@@ -10,7 +10,7 @@ from traits.api import HasTraits, observe, HTML, Instance
 from traitsui.api import View, Item, HGroup, TextEditor, Controller, TupleEditor, EnumEditor
 from pyface.qt import QtGui
 
-from ..workflow.views.view_base import COLORMAPS
+from ..workflow.views.view_base import COLORMAPS, LEGEND_LOCATIONS
 from ..editors import TabListEditor
 
 class PluginHelpMixin(HasTraits):
@@ -136,6 +136,9 @@ BasePlotParamsView = View(Item('title',
                                editor = EnumEditor(values = {'' : '0:(Default)'} | COLORMAPS)),
                           Item('legend',
                                label = "Show legend?"),
+                          Item('legend_loc',
+                               label = "Legend\nlocation",
+                               editor = EnumEditor(values = LEGEND_LOCATIONS)),
                           Item('sharex',
                                label = "Share\nX axis?"),
                           Item('sharey',
