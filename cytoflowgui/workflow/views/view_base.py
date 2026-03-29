@@ -305,6 +305,7 @@ class BasePlotParams(HasStrictTraits):
     legend_loc = Str("upper right")
     sharex = Bool(True)
     sharey = Bool(True)
+    margin_titles = Bool(False)
     despine = Bool(True)
         
     def __repr__(self):

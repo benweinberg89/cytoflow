@@ -124,6 +124,7 @@ def _dump_params_v2(params):
                 legend_loc = params.legend_loc,
                 sharex = params.sharex,
                 sharey = params.sharey,
+                margin_titles = params.margin_titles,
                 despine = params.despine,
 
                 # DataplotParams

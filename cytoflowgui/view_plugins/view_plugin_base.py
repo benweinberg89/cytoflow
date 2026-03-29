@@ -143,6 +143,8 @@ BasePlotParamsView = View(Item('title',
                                label = "Share\nX axis?"),
                           Item('sharey',
                                label = "Share\nY axis?"),
+                          Item('margin_titles',
+                               label = "Margin\ntitles"),
                           Item('despine',
                                label = "Despine?"))
 
