@@ -178,11 +178,11 @@ class RangeSlider(QtGui.QSlider):
                 self._high += diff
         elif self.active_slider == 0:
             if new_pos >= self._high:
-                new_pos = self._high - 1
+                new_pos = int(self._high) - 1
             self._low = new_pos
         else:
             if new_pos <= self._low:
-                new_pos = self._low + 1
+                new_pos = int(self._low) + 1
             self._high = new_pos
 
         self.click_offset = new_pos
