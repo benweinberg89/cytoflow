@@ -371,7 +371,7 @@ class BaseView(HasStrictTraits):
                                  loc = legend_loc)
                     self._update_legend(g._legend)
                     
-        if self.xfacet is not None and self.yfacet is not None:
+        if self.xfacet and self.yfacet:
             g.set_titles(template = "{row_var} = {row_name}\n{col_var} = {col_name}")
                         
         if title:
