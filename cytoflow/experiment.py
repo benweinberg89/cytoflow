@@ -566,9 +566,7 @@ class Experiment(HasStrictTraits):
                 meta_type = CategoricalDtype([meta_value])
 
             new_data[meta_name] = \
-                pd.Series(data = [meta_value] * len(new_data),
-                          index = new_data.index,
-                          dtype = meta_type)
+                pd.Series(meta_value, index=new_data.index, dtype=meta_type)
             
             # if we're categorical, merge the categories
             if isinstance(meta_type, pd.CategoricalDtype) and meta_name in self.data:
@@ -640,47 +638,76 @@ class Experiment(HasStrictTraits):
                 raise util.CytoflowError("Metadata dataset {} should be {}"
                                          .format(i, list(self.conditions.keys())))
             
-        # add the conditions to tube's internal data frame.  specify the conditions
-        # dtype using self.conditions.  check for errors as we do so.
-        
-        # take this chance to up-convert the float32s to float64.
-        # this happened automatically in DataFrame.append(), below, but 
-        # only in certain cases.... :-/
-        
-        # TODO - the FCS standard says you can specify the precision.  
-        # check with int/float/double files!
-        
-        new_data = [d.astype("float64", copy=True) for d in data]
-        
-        for d, c in zip(new_data, conditions):
+        # concatenate channel data via numpy (much faster than pd.concat with mixed types)
+        import numpy as np
+
+        # ensure data is float64 (should already be if parsed with dtype='float64')
+        new_data = [d.astype("float64", copy=False) for d in data]
+
+        channels = list(new_data[0].columns)
+
+        # stack all channel data into one contiguous array
+        # .values avoids pandas column re-selection overhead
+        arrays = [d.values for d in new_data]
+        if len(self) > 0:
+            arrays.insert(0, self.data[channels].values)
+        stacked = np.concatenate(arrays)
+
+        combined = pd.DataFrame(stacked, columns=channels)
+
+        # build condition columns using row offsets (avoids per-tube DataFrame overhead)
+        existing_offset = len(self) if len(self) > 0 else 0
+        total_rows = len(combined)
+        new_cat_values = {}
+
+        for c in conditions:
             for meta_name, meta_value in c.items():
-                meta_type = self.conditions[meta_name].dtype
-                
-                if isinstance(meta_type, pd.CategoricalDtype):
-                    meta_type = CategoricalDtype([meta_value])
-    
-                d[meta_name] = \
-                    pd.Series(data = [meta_value] * len(d),
-                              index = d.index,
-                              dtype = meta_type)
-                
-                # if we're categorical, merge the categories
-                if isinstance(meta_type, pd.CategoricalDtype) and meta_name in self.data:
-                    cats = set(self.data[meta_name].cat.categories) | set(d[meta_name].cat.categories)
-                    cats = sorted(cats) 
-                    self.data[meta_name] = self.data[meta_name].cat.set_categories(cats)
-                    d[meta_name] = d[meta_name].cat.set_categories(cats)
-                    
-                # update the metadata 'values'
                 self.metadata[meta_name]['values'].append(meta_value)
-                self.metadata[meta_name]['values'] = natsorted(set(self.metadata[meta_name]['values']))
-            
-        self.data = pd.concat([self.data] + new_data, ignore_index = True, sort = True)
+                meta_type = self.conditions[meta_name].dtype
+                if isinstance(meta_type, pd.CategoricalDtype):
+                    new_cat_values.setdefault(meta_name, set()).add(meta_value)
+
+        for meta_name in self.conditions:
+            meta_type = self.conditions[meta_name].dtype
+
+            if isinstance(meta_type, pd.CategoricalDtype):
+                all_new_vals = new_cat_values.get(meta_name, set())
+                if meta_name in self.data.columns:
+                    all_cats = sorted(set(self.data[meta_name].cat.categories) | all_new_vals)
+                else:
+                    all_cats = sorted(all_new_vals)
+
+                # build codes array directly (int8 if few categories, int16 otherwise)
+                codes = np.empty(total_rows, dtype=np.int16)
+                if existing_offset > 0:
+                    codes[:existing_offset] = self.data[meta_name].cat.codes.values
+
+                pos = existing_offset
+                for d, c in zip(new_data, conditions):
+                    n = len(d)
+                    codes[pos:pos + n] = all_cats.index(c[meta_name])
+                    pos += n
+
+                combined[meta_name] = pd.Categorical.from_codes(codes, categories=all_cats)
+            else:
+                col = np.empty(total_rows, dtype=meta_type)
+                if existing_offset > 0:
+                    col[:existing_offset] = self.data[meta_name].values
+
+                pos = existing_offset
+                for d, c in zip(new_data, conditions):
+                    n = len(d)
+                    col[pos:pos + n] = c[meta_name]
+                    pos += n
+
+                combined[meta_name] = col
+
+        self.data = combined
         del new_data
-        
-        # update the metadata 'values'
-        # for condition in self.conditions:
-        #     self.metadata[condition]['values'] = natsorted(self.data[condition].unique())
+
+        # update the metadata 'values' once after all tubes processed
+        for meta_name in self.conditions:
+            self.metadata[meta_name]['values'] = natsorted(set(self.metadata[meta_name]['values']))
 
 if __name__ == "__main__":
     from fcsparser import fcsparser

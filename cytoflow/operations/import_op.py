@@ -606,68 +606,103 @@ def autodetect_name_metadata(filename, data_set = 0):
         return "$PnS"    
 
 # module-level, so we can reuse it in other modules
-def parse_tube(filename, experiment = None, data_set = 0, metadata_only = False):   
+def parse_tube(filename, experiment = None, data_set = 0, metadata_only = False):
     """
     Parses an FCS file.  A thin wrapper over ``fcsparser.parse``.
-    
+
     Parameters
     ----------
     filename : string
         The file to parse.
-        
+
     experiment : `Experiment` (optional, default: None)
         If provided, check the tube's parameters against this experiment
         first.
-        
+
     data_set : int (optional, default: 0)
         Which data set in the FCS file to parse?
-        
+
     metadata_only : bool (optional, default: False)
         If ``True``, only parse the metadata.  Because this is at the beginning
         of the FCS file, this happens much faster than parsing the entire file.
-        
+
     Returns
     -------
     tube_metadata : dict
         The metadata from the FCS file
-        
-    tube_data : `pandas.DataFrame` 
+
+    tube_data : `pandas.DataFrame`
         The actual tabular data from the FCS file.  Each row is an event, and
         each column is a channel.
-        
+
     """
-    
+
     if experiment is not None:
-        check_tube(filename, experiment)
         name_metadata = experiment.metadata["name_metadata"]
     else:
         name_metadata = '$PnS'
-        
-         
+
+
     try:
         if metadata_only:
             tube_data = None
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 tube_meta = fcsparser.parse(
-                                filename, 
+                                filename,
                                 meta_data_only = True,
                                 data_set = data_set,
-                                channel_naming = name_metadata)
+                                channel_naming = name_metadata,
+                                reformat_meta = True)
         else:
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 tube_meta, tube_data = fcsparser.parse(
-                                        filename, 
-                                        meta_data_only = metadata_only,
+                                        filename,
+                                        meta_data_only = False,
                                         data_set = data_set,
-                                        channel_naming = name_metadata)
+                                        channel_naming = name_metadata,
+                                        reformat_meta = False,
+                                        dtype = 'float64')
     except Exception as e:
         raise util.CytoflowError("FCS reader threw an error reading data for tube {}"
                                  .format(filename)) from e
-            
+
+    # validate channels and voltages using raw $PnN/$PnS/$PnV keys
+    # (avoids expensive reformat_meta DataFrame construction)
+    if experiment is not None:
+        # build channel name -> parameter number lookup from raw metadata
+        num_pars = int(tube_meta.get('$PAR', 0))
+        name_suffix = name_metadata[3]  # '$PnS' -> 'S', '$PnN' -> 'N'
+        chan_to_par = {}
+        for i in range(1, num_pars + 1):
+            cname = tube_meta.get('$P{}{}'.format(i, name_suffix))
+            if cname:
+                chan_to_par[cname] = i
+
+        tube_channel_names = set(chan_to_par.keys())
+        exp_fcs_names = set(experiment.metadata[c]["fcs_name"] for c in experiment.channels)
+        if not exp_fcs_names <= tube_channel_names:
+            raise util.CytoflowError("Tube {0} doesn't have the same channels as the rest of the experiment"
+                                     .format(filename))
+
+        ignore_v = experiment.metadata['ignore_v']
+        for channel in experiment.channels:
+            if "voltage" in experiment.metadata[channel]:
+                fcs_name = experiment.metadata[channel]["fcs_name"]
+                par_num = chan_to_par[fcs_name]
+                v_key = '$P{}V'.format(par_num)
+                if v_key not in tube_meta:
+                    raise util.CytoflowError("Didn't find a voltage for channel {0}"
+                                       "in tube {1}".format(channel, filename))
+                old_v = experiment.metadata[channel]["voltage"]
+                new_v = tube_meta[v_key]
+                if old_v != new_v and channel not in ignore_v:
+                    raise util.CytoflowError("Tube {0}, channel {1} doesn't have the same voltages as the rest of the experiment"
+                                        .format(filename, channel))
+
     del tube_meta['__header__']
-            
+
     return tube_meta, tube_data
 
 

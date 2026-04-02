@@ -1,4 +1,5 @@
 DEV_SETUP.md
+benchmarks/
 
 # Compiled python modules.
 *.pyc
