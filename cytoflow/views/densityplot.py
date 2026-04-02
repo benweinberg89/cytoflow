@@ -30,7 +30,7 @@ from traits.api import provides, Constant
 
 import matplotlib.pyplot as plt
 import numpy as np
-import scipy.ndimage.filters
+import scipy.ndimage
 import copy
 
 import cytoflow.utility as util
@@ -195,7 +195,7 @@ def _densityplot(x, y, xbins, ybins, **kwargs):
     smoothed_sigma = kwargs.pop('smoothed_sigma', 1)
     
     if smoothed:
-        h = scipy.ndimage.filters.gaussian_filter(h, sigma = smoothed_sigma)
+        h = scipy.ndimage.gaussian_filter(h, sigma = smoothed_sigma)
 
     ax = plt.gca()
     ax.pcolormesh(X, Y, h.T, **kwargs)

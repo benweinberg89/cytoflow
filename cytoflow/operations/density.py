@@ -38,7 +38,7 @@ from traits.api import (HasStrictTraits, Str, Dict, Any, Instance,
 
 import numpy as np
 import scipy.stats
-import scipy.ndimage.filters
+import scipy.ndimage
 import pandas as pd
 
 from cytoflow.views import IView, DensityView
@@ -298,7 +298,7 @@ class DensityGateOp(HasStrictTraits):
                                      group_data[self.ychannel], 
                                      bins=[xbins, ybins])
             
-            h = scipy.ndimage.filters.gaussian_filter(h, sigma = self.sigma)
+            h = scipy.ndimage.gaussian_filter(h, sigma = self.sigma)
             
             i = scipy.stats.rankdata(h, method = "ordinal") - 1
             i = np.unravel_index(np.argsort(-i), h.shape)

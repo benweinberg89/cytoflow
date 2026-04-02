@@ -1204,7 +1204,7 @@ class FlowPeaks2DDensityView(By2DView, AnnotatingView, NullView):
         h = density(util.cartesian([xscale(xbins), yscale(ybins)]))
         h = np.reshape(h, (len(xbins), len(ybins)))
         if smoothed:
-            h = scipy.ndimage.filters.gaussian_filter(h, sigma = smoothed_sigma)
+            h = scipy.ndimage.gaussian_filter(h, sigma = smoothed_sigma)
         axes.pcolormesh(xbins, ybins, h.T, **kwargs)
 
         ix = self.op.channels.index(self.xchannel)
