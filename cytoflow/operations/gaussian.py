@@ -485,14 +485,14 @@ class GaussianMixtureOp(HasStrictTraits):
                  util.CytoflowOpWarning)
          
         if self.num_components > 1:
-            event_assignments = pd.Series(["{}_None".format(self.name)] * len(experiment), dtype = "object")
- 
+            event_assignments = pd.Series("{}_None".format(self.name), index=experiment.data.index, dtype = "object")
+
         if self.sigma is not None:
-            event_gate = {i : pd.Series([False] * len(experiment), dtype = "bool")
+            event_gate = {i : pd.Series(False, index=experiment.data.index, dtype = "bool")
                            for i in range(self.num_components)}
- 
+
         if self.posteriors:
-            event_posteriors = {i : pd.Series([0.0] * len(experiment), dtype = "double")
+            event_posteriors = {i : pd.Series(0.0, index=experiment.data.index, dtype = "double")
                                 for i in range(self.num_components)}
 
         if self.by:
@@ -532,7 +532,7 @@ class GaussianMixtureOp(HasStrictTraits):
                 
             # which values are missing?
 
-            x_na = pd.Series([False] * len(x))
+            x_na = pd.Series(False, index=x.index)
             for c in self.channels:
                 x_na[np.isnan(x[c]).values] = True
                         
@@ -544,7 +544,7 @@ class GaussianMixtureOp(HasStrictTraits):
                 predicted = np.full(len(x), -1, "int")
                 predicted[~x_na] = gmm.predict(x[~x_na])
                 
-                predicted_str = pd.Series(["(none)"] * len(predicted))
+                predicted_str = pd.Series("(none)", index=range(len(predicted)))
                 for c in range(0, self.num_components):
                     predicted_str[predicted == c] = "{0}_{1}".format(self.name, c + 1)
                 predicted_str[predicted == -1] = "{0}_None".format(self.name)
@@ -558,20 +558,19 @@ class GaussianMixtureOp(HasStrictTraits):
                 for c in range(self.num_components):
                     s = np.linalg.pinv(gmm.covariances_[c])
                     mu = gmm.means_[c]
-                    
-                    # compute the Mahalanobis distance
 
-                    f = lambda x, mu, s: np.dot(np.dot((x - mu).T, s), (x - mu))
-                    dist = np.apply_along_axis(f, 1, x, mu, s)
+                    # compute the Mahalanobis distance (vectorized)
+                    diff = x - mu
+                    dist = np.sum(diff @ s * diff, axis=1)
 
                     # come up with a threshold based on sigma.  you'll note we
-                    # didn't sqrt dist: that's because for a multivariate 
+                    # didn't sqrt dist: that's because for a multivariate
                     # Gaussian, the square of the Mahalanobis distance is
                     # chi-square distributed
-                    
+
                     p = (scipy.stats.norm.cdf(self.sigma) - 0.5) * 2
                     thresh = scipy.stats.chi2.ppf(p, 1)
-                    
+
                     event_gate[c].iloc[group_idx] = np.less_equal(dist, thresh)
                     
             if self.posteriors:  
